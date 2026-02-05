@@ -1,0 +1,97 @@
+<!-- license-template/footer.html -->
+
+<footer style="
+  border-top:1px solid rgba(11,18,32,.10);
+  background: linear-gradient(90deg, rgba(91,197,0,.14), rgba(0,110,179,.10)), #FFFFFF;
+">
+  <div class="container" style="padding: 16px 0; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="
+        width:12px; height:12px; border-radius:50%;
+        background:#5BC500; box-shadow: 0 0 0 4px rgba(91,197,0,.14);
+      "></span>
+      <div style="line-height:1.2;">
+        <div style="font-size:13px; font-weight:650; color:#0B1220;">License Template</div>
+        <div style="font-size:12px; color: rgba(11,18,32,.62);">
+          Smart reminders for certificates & licenses (Expiry alerts)
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <span class="pill" id="footerTime">—</span>
+      <span class="pill">© <span id="yearNow"></span> EMSTEEL</span>
+      <span class="pill">Powered by IT Client Excellence</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Preview Modal -->
+<div class="modal" id="imgModal" role="dialog" aria-modal="true" aria-label="Certificate Preview">
+  <div class="box">
+    <div class="top">
+      <b id="imgModalTitle">Preview</b>
+      <button type="button" aria-label="Close" onclick="LMS_UI.closePreview()">×</button>
+    </div>
+    <div class="content">
+      <div class="preview-frame">
+        <img id="imgModalSrc" alt="Certificate image preview" src="">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Footer time + modal handlers
+  (function(){
+    const y = new Date().getFullYear();
+    const yEl = document.getElementById("yearNow");
+    if (yEl) yEl.textContent = y;
+
+    const timeEl = document.getElementById("footerTime");
+    const tick = () => {
+      const d = new Date();
+      const v = d.toLocaleString(undefined, { weekday:"short", year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+      if (timeEl) timeEl.textContent = v;
+    };
+    tick();
+    setInterval(tick, 30000);
+  })();
+
+  window.LMS_UI = window.LMS_UI || {};
+
+  window.LMS_UI.openPreview = function(title, imgUrl){
+    const modal = document.getElementById("imgModal");
+    const t = document.getElementById("imgModalTitle");
+    const img = document.getElementById("imgModalSrc");
+
+    if (!modal || !t || !img) return;
+
+    t.textContent = title || "Preview";
+    img.src = imgUrl || "";
+    modal.classList.add("show");
+
+    // prevent background scroll
+    document.body.style.overflow = "hidden";
+  };
+
+  window.LMS_UI.closePreview = function(){
+    const modal = document.getElementById("imgModal");
+    const img = document.getElementById("imgModalSrc");
+    if (img) img.src = "";
+    if (modal) modal.classList.remove("show");
+    document.body.style.overflow = "";
+  };
+
+  // click outside to close
+  document.addEventListener("click", function(e){
+    const modal = document.getElementById("imgModal");
+    if (!modal || !modal.classList.contains("show")) return;
+    if (e.target === modal) LMS_UI.closePreview();
+  });
+
+  // ESC to close
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") LMS_UI.closePreview();
+  });
+</script>

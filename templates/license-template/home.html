@@ -1,0 +1,332 @@
+<!-- license-template/home.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Licenses & Certificates Manager</title>
+</head>
+<body>
+
+  {% include "license-template/header.html" %}
+
+  <main class="page">
+    <div class="container">
+
+      <!-- Hero -->
+      <section class="hero" id="dashboard" aria-label="Overview">
+        <div>
+          <h1 id="helloTitle">Welcome</h1>
+          <p>
+            Track certificates and licenses, attach evidence images, and receive smart expiry reminders قبل الانتهاء.
+            <span class="muted">Designed with EMSTEEL style (Blue/Green).</span>
+          </p>
+        </div>
+
+        <div class="meta">
+          <span class="pill" id="userPill">
+            User: {{ request.user.username|default:"Guest" }}
+          </span>
+          <span class="pill" id="todayPill">—</span>
+          <button class="btn success" type="button" onclick="window.location.href='#records'">View Records</button>
+        </div>
+      </section>
+
+      <div style="height:14px"></div>
+
+      <!-- KPI Cards -->
+      <section class="grid cols-4" aria-label="KPI Cards">
+        <div class="card">
+          <div class="hd">
+            <b>Total Records</b>
+            <small class="muted">All certificates/licenses</small>
+          </div>
+          <div class="bd">
+            <div class="stat">
+              <div>
+                <div class="num">{{ total_count|default:"—" }}</div>
+                <div class="lbl">Registered items</div>
+              </div>
+              <span class="badge info">Live</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <b>Expiring Soon</b>
+            <small class="muted">Next 30 days</small>
+          </div>
+          <div class="bd">
+            <div class="stat">
+              <div>
+                <div class="num">{{ expiring_soon_count|default:"—" }}</div>
+                <div class="lbl">Need action</div>
+              </div>
+              <span class="badge warn">Warning</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <b>Expired</b>
+            <small class="muted">Past due</small>
+          </div>
+          <div class="bd">
+            <div class="stat">
+              <div>
+                <div class="num">{{ expired_count|default:"—" }}</div>
+                <div class="lbl">Immediate follow-up</div>
+              </div>
+              <span class="badge bad">Critical</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <b>Valid</b>
+            <small class="muted">Not expired</small>
+          </div>
+          <div class="bd">
+            <div class="stat">
+              <div>
+                <div class="num">{{ valid_count|default:"—" }}</div>
+                <div class="lbl">In compliance</div>
+              </div>
+              <span class="badge ok">OK</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style="height:14px"></div>
+
+      <!-- Notifications / Actions -->
+      <section class="grid cols-2" id="notifications" aria-label="Notifications & Actions">
+        <div class="card">
+          <div class="hd">
+            <b>Smart Reminder</b>
+            <small class="muted">Before expiry alert</small>
+          </div>
+          <div class="bd">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+              <div style="
+                width:44px;height:44px;border-radius:14px;
+                background: rgba(0,110,179,.10);
+                border:1px solid rgba(0,110,179,.18);
+                display:grid;place-items:center;
+                color: var(--em-blue);
+                font-weight:800;
+              ">!</div>
+
+              <div>
+                <div style="font-weight:700; font-size:14px;">
+                  Automated alerts can be sent to owners قبل الانتهاء (e.g., 30/14/7 days).
+                </div>
+                <div class="muted" style="font-size:13px; line-height:1.6; margin-top:6px;">
+                  Tip: Use email/Teams notifications in your backend scheduler (Celery/cron) based on expiry_date.
+                </div>
+
+                <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+                  <button class="btn" type="button" onclick="alert('Connect this button to your Create Record page (Django URL).')">
+                    + New Certificate
+                  </button>
+                  <button class="btn primary" type="button" onclick="document.getElementById('globalSearch')?.focus()">
+                    Search Records
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <b>Quick Filters</b>
+            <small class="muted">Fast compliance view</small>
+          </div>
+          <div class="bd">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="chip" type="button" onclick="LMS_FILTER.apply('all')"><span class="dot"></span>All</button>
+              <button class="chip green" type="button" onclick="LMS_FILTER.apply('valid')"><span class="dot"></span>Valid</button>
+              <button class="chip" type="button" onclick="LMS_FILTER.apply('expiring')"><span class="dot"></span>Expiring</button>
+              <button class="chip" type="button" onclick="LMS_FILTER.apply('expired')"><span class="dot"></span>Expired</button>
+            </div>
+
+            <div class="muted" style="font-size:13px; line-height:1.6; margin-top:12px;">
+              هذه الفلاتر تعمل على الجدول بالأسفل مباشرة (Front-end) — ويمكنك ربطها لاحقاً بـ query parameters في Django.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div style="height:14px"></div>
+
+      <!-- Records Table -->
+      <section class="card" id="records" aria-label="Records Table">
+        <div class="hd">
+          <div>
+            <b>Certificates & Licenses</b>
+            <div class="muted" style="margin-top:2px; font-size:12px;">Preview images + status badges + expiry details</div>
+          </div>
+          <small class="muted">Showing: <span id="shownCount">—</span></small>
+        </div>
+
+        <div class="bd table-wrap">
+          <table id="recordsTable" aria-label="Records">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Record ID</th>
+                <th>Title</th>
+                <th>Owner</th>
+                <th>Expiry Date</th>
+                <th>Days Left</th>
+                <th>Evidence</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody">
+              <!--
+                Option A (Backend): loop from Django:
+                {% for r in records %}
+                  <tr data-status="{{ r.status|lower }}">
+                    ...
+                  </tr>
+                {% endfor %}
+
+                Option B (Frontend demo): JS will inject sample rows if empty.
+              -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="height:18px"></div>
+    </div>
+  </main>
+
+  {% include "license-template/footer.html" %}
+
+  <script>
+    // ===== Page JS =====
+    (function(){
+      const hello = document.getElementById("helloTitle");
+      const todayPill = document.getElementById("todayPill");
+
+      const now = new Date();
+      const hr = now.getHours();
+      const greet = hr < 12 ? "Good morning" : (hr < 18 ? "Good afternoon" : "Good evening");
+      if (hello) hello.textContent = greet + " — License & Certificates Dashboard";
+
+      if (todayPill){
+        todayPill.textContent = now.toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"short", day:"2-digit" });
+      }
+    })();
+
+    // Simple front-end filter/search (safe & fast)
+    const LMS_FILTER = {
+      apply: function(type){
+        const rows = Array.from(document.querySelectorAll("#recordsBody tr"));
+        rows.forEach(r => {
+          const st = (r.getAttribute("data-status") || "all").toLowerCase();
+          const show =
+            type === "all" ||
+            (type === "valid" && st === "valid") ||
+            (type === "expiring" && st === "expiring") ||
+            (type === "expired" && st === "expired");
+          r.style.display = show ? "" : "none";
+        });
+        LMS_FILTER.updateShown();
+      },
+      updateShown: function(){
+        const rows = Array.from(document.querySelectorAll("#recordsBody tr"));
+        const visible = rows.filter(r => r.style.display !== "none").length;
+        const el = document.getElementById("shownCount");
+        if (el) el.textContent = String(visible);
+      }
+    };
+
+    (function(){
+      const input = document.getElementById("globalSearch");
+      if (!input) return;
+
+      input.addEventListener("input", function(){
+        const q = String(input.value || "").trim().toLowerCase();
+        const rows = Array.from(document.querySelectorAll("#recordsBody tr"));
+
+        rows.forEach(r => {
+          const text = (r.innerText || "").toLowerCase();
+          r.style.display = (!q || text.includes(q)) ? "" : "none";
+        });
+
+        LMS_FILTER.updateShown();
+      });
+    })();
+
+    // Demo rows if backend did not render any
+    (function(){
+      const body = document.getElementById("recordsBody");
+      if (!body) return;
+
+      const hasRows = body.querySelector("tr");
+      if (hasRows) { LMS_FILTER.updateShown(); return; }
+
+      const sample = [
+        {status:"valid", id:"LIC-00021", title:"Trade License", owner:"Facilities", expiry:"2026-12-31", img:"https://dummyimage.com/1200x800/ffffff/006EB3&text=Trade+License"},
+        {status:"expiring", id:"CERT-01004", title:"ISO 14001 Certificate", owner:"Sustainability", expiry:"2026-03-05", img:"https://dummyimage.com/1200x800/ffffff/5BC500&text=ISO+14001"},
+        {status:"expired", id:"CERT-00077", title:"Calibration Certificate", owner:"QC Team", expiry:"2025-12-15", img:"https://dummyimage.com/1200x800/ffffff/E11D48&text=Expired+Doc"},
+        {status:"valid", id:"LIC-00210", title:"Insurance Document", owner:"Finance", expiry:"2026-08-20", img:"https://dummyimage.com/1200x800/ffffff/0B1220&text=Insurance"}
+      ];
+
+      const daysLeft = (dateStr) => {
+        const d = new Date(dateStr + "T00:00:00");
+        const now = new Date();
+        const diff = Math.ceil((d - now) / (1000*60*60*24));
+        return diff;
+      };
+
+      const statusCell = (st) => {
+        const cls = st === "expired" ? "bad" : (st === "expiring" ? "warn" : "ok");
+        const label = st === "expired" ? "Expired" : (st === "expiring" ? "Expiring" : "Valid");
+        return `
+          <span class="status ${st === "expired" ? "bad" : (st === "expiring" ? "warn" : "ok")}">
+            <span class="s-dot"></span>
+            <span class="badge ${cls}">${label}</span>
+          </span>
+        `;
+      };
+
+      body.innerHTML = sample.map(r => {
+        const left = daysLeft(r.expiry);
+        const leftText = (left < 0) ? "Overdue" : String(left);
+        const leftBadge =
+          (left < 0) ? `<span class="badge bad">Overdue</span>` :
+          (left <= 30) ? `<span class="badge warn">${left} days</span>` :
+          `<span class="badge ok">${left} days</span>`;
+
+        return `
+          <tr data-status="${LMS_UI.escapeHtml(r.status)}">
+            <td>${statusCell(r.status)}</td>
+            <td><b>${LMS_UI.escapeHtml(r.id)}</b></td>
+            <td>${LMS_UI.escapeHtml(r.title)}</td>
+            <td class="muted">${LMS_UI.escapeHtml(r.owner)}</td>
+            <td>${LMS_UI.escapeHtml(r.expiry)}</td>
+            <td>${leftBadge}</td>
+            <td>
+              <button class="btn" type="button"
+                onclick="LMS_UI.openPreview('${LMS_UI.escapeHtml(r.title)} — ${LMS_UI.escapeHtml(r.id)}','${LMS_UI.escapeHtml(r.img)}')">
+                Preview
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      LMS_FILTER.updateShown();
+    })();
+  </script>
+
+</body>
+</html>
