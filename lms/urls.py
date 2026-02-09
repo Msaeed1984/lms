@@ -8,25 +8,23 @@ from registry.views import home
 
 
 urlpatterns = [
+    # ================== Language Switch (IMPORTANT) ==================
+    path("i18n/", include("django.conf.urls.i18n")),
+
     # ================== Home Page ==================
-    # يعرض templates/license-template/home.html
     path('', home, name='home'),
 
     # ================== Admin ==================
     path('admin/', admin.site.urls),
 
     # ================== Auth (Allauth) ==================
-    # يوفر: /accounts/login/  /accounts/logout/  /accounts/microsoft/login/
     path('accounts/', include('allauth.urls')),
 
     # ================== Project Apps ==================
-    # مسار تطبيق accounts الخاص بك (إن كان فيه صفحات/واجهات لاحقاً)
     path('app-accounts/', include('accounts.urls')),
-
     path('registry/', include('registry.urls')),
     path('notifications/', include('notifications.urls')),
 ]
-
 
 # ================== Serve Media Files in Development ==================
 if settings.DEBUG:

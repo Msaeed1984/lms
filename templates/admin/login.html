@@ -1,0 +1,99 @@
+{% extends "admin/login.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* ✅ اجعل (Django administration) + الأزرار في صف واحد داخل الهيدر */
+   /* ✅ ثبّت اتجاه الهيدر فقط ليبقى زر اللغة أقصى اليمين دائمًا */
+#header{
+  direction: ltr;
+}
+
+#header #branding{
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+#header #branding #site-name{
+  margin: 0;
+}
+
+/* ✅ ادفع الأزرار لأقصى اليمين دائماً */
+#header #branding .lang-under-title{
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#header #branding .lang-under-title form{ margin: 0; }
+
+
+    /* شكل الأزرار */
+    #header #branding .lang-btn{
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.10);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      height: 24px;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease, opacity .18s ease;
+    }
+
+    #header #branding .lang-btn:hover{
+      background: rgba(255,255,255,.18);
+      border-color: rgba(255,255,255,.65);
+      transform: translateY(-1px);
+    }
+
+    #header #branding .lang-btn:active{
+      transform: translateY(0);
+      opacity: .95;
+    }
+
+    #header #branding .lang-btn.active{
+      background: rgba(255,255,255,.28);
+      border-color: rgba(255,255,255,.75);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.10);
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+  {% get_current_language as LANGUAGE_CODE %}
+
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">{% trans "Django administration" %}</a>
+  </h1>
+
+  <!-- ✅ Language Switch Buttons (Right side) -->
+  <div class="lang-under-title" aria-label="Language Switch">
+    <form method="post" action="{% url 'set_language' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path|escape }}">
+      <button type="submit" name="language" value="en"
+              class="lang-btn {% if LANGUAGE_CODE|slice:':2' == 'en' %}active{% endif %}">
+        EN
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'set_language' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path|escape }}">
+      <button type="submit" name="language" value="ar"
+              class="lang-btn {% if LANGUAGE_CODE|slice:':2' == 'ar' %}active{% endif %}">
+        AR
+      </button>
+    </form>
+  </div>
+{% endblock %}

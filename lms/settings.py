@@ -77,15 +77,19 @@ SOCIALACCOUNT_AUTO_SIGNUP = False
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+
+    "django.middleware.locale.LocaleMiddleware",  # للغات (إن كنت ضفته)
+
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "allauth.account.middleware.AccountMiddleware",  # ✅ Required by allauth
+
+    "allauth.account.middleware.AccountMiddleware",  # ✅ هذا المطلوب (سبب الخطأ)
 
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 
 
 # ================== URLS / WSGI ==================
@@ -137,10 +141,19 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ================== INTERNATIONALIZATION ==================
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+LANGUAGE_CODE = "en"   # بدل en-us (أفضل مع set_language)
+
 USE_I18N = True
+
+LANGUAGES = [
+    ("en", "English"),
+    ("ar", "العربية"),
+]
+
+TIME_ZONE = "UTC"
 USE_TZ = True
+
+LANGUAGE_COOKIE_NAME = "django_language"
 
 
 # ================== STATIC & MEDIA ==================
