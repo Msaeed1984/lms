@@ -26,11 +26,19 @@
   *{ box-sizing:border-box; }
   html,body{ height:100%; }
   body{
-    margin:0;
-    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-    color: var(--text);
-    background: var(--bg);
-  }
+  margin:0;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+
+  /* يجعل الصفحة بطول الشاشة */
+  min-height: 100vh;
+
+  /* نظام Flex لتثبيت الفوتر بالأسفل */
+  display: flex;
+  flex-direction: column;
+}
+
   a{ color:inherit; text-decoration:none; }
   img{ max-width:100%; display:block; }
 
@@ -206,16 +214,77 @@
     box-shadow: 0 16px 34px rgba(91,197,0,.22);
   }
 
-  /* Page spacing under sticky header */
-  main.page{
-    padding: 18px 0 26px;
+  /* ✅ Dropdown Filters (professional list) */
+  .dropdown{ position: relative; display:inline-flex; }
+  .dropdown .menu{
+    position:absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 260px;
+    background: rgba(255,255,255,.98);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.18);
+    overflow:hidden;
+    display:none;
+    z-index: 9999;
+  }
+  .dropdown.open .menu{ display:block; }
+
+  .menu .menu-hd{
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(0,110,179,.06), rgba(91,197,0,.05));
+  }
+  .menu .menu-hd b{ font-size: 12.5px; letter-spacing:.2px; }
+  .menu .menu-hd small{ display:block; margin-top:4px; color: var(--muted); font-size: 12px; }
+
+  .menu .item{
+    width:100%;
+    border:0;
+    background: transparent;
+    cursor:pointer;
+    padding: 12px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-size: 13px;
+  }
+  .menu .item:hover{ background: rgba(0,110,179,.04); }
+  .menu .left{ display:flex; align-items:center; gap:10px; min-width: 0; }
+  .menu .icon-dot{
+    width:10px;height:10px;border-radius:50%;
+    background: var(--em-blue);
+    box-shadow: 0 0 0 4px rgba(0,110,179,.10);
+    flex:0 0 auto;
+  }
+  .menu .icon-dot.green{ background: var(--em-green); box-shadow: 0 0 0 4px rgba(91,197,0,.12); }
+  .menu .icon-dot.warn{ background: var(--warn); box-shadow: 0 0 0 4px rgba(245,165,36,.12); }
+  .menu .icon-dot.bad{ background: var(--bad); box-shadow: 0 0 0 4px rgba(225,29,72,.10); }
+
+  .menu .txt{ display:flex; flex-direction:column; line-height:1.2; min-width: 0; }
+  .menu .txt b{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .menu .txt small{ font-size:12px; color: var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .menu .kbd{
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.85);
+    color: rgba(11,18,32,.70);
+    flex: 0 0 auto;
   }
 
+  /* Page spacing under sticky header */
+  main.page{
+  padding: 18px 0 26px;
+  flex: 1;   /* هذا السطر هو المهم */
+}
+
+
   /* Common cards & layout */
-  .grid{
-    display:grid;
-    gap:14px;
-  }
+  .grid{ display:grid; gap:14px; }
   .grid.cols-4{ grid-template-columns: repeat(4, 1fr); }
   .grid.cols-3{ grid-template-columns: repeat(3, 1fr); }
   .grid.cols-2{ grid-template-columns: repeat(2, 1fr); }
@@ -313,9 +382,7 @@
   }
 
   /* Table */
-  .table-wrap{
-    overflow:auto;
-  }
+  .table-wrap{ overflow:auto; }
   table{
     width:100%;
     border-collapse: collapse;
@@ -355,58 +422,6 @@
   .status.info .s-dot{ background: var(--info); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
   .muted{ color: var(--muted); }
 
-  /* Modal (Preview Image) */
-  .modal{
-    position:fixed;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding: 18px;
-    background: rgba(0,0,0,.55);
-    z-index: 99999;
-  }
-  .modal.show{ display:flex; }
-  .modal .box{
-    width:min(920px, 96vw);
-    background:#fff;
-    border-radius: 18px;
-    overflow:hidden;
-    border: 1px solid rgba(255,255,255,.25);
-    box-shadow: 0 24px 70px rgba(0,0,0,.35);
-  }
-  .modal .top{
-    padding: 12px 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    border-bottom: 1px solid var(--line);
-    background: linear-gradient(90deg, rgba(0,110,179,.08), rgba(91,197,0,.06));
-  }
-  .modal .top b{ font-size: 13px; }
-  .modal .top button{
-    border:0;
-    background: transparent;
-    cursor:pointer;
-    font-size: 18px;
-    opacity:.75;
-  }
-  .modal .content{
-    padding: 14px;
-    background: #fff;
-  }
-  .preview-frame{
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    overflow:hidden;
-    background: #F8FAFC;
-  }
-  .preview-frame img{
-    width:100%;
-    height:auto;
-  }
-
   /* Responsive */
   @media (max-width: 1100px){
     .grid.cols-4{ grid-template-columns: repeat(2, 1fr); }
@@ -419,6 +434,64 @@
     .grid.cols-4, .grid.cols-3, .grid.cols-2{ grid-template-columns: 1fr; }
     .hero{ flex-direction: column; align-items:flex-start; }
   }
+
+  /* ✅ Ensure Preview Modal hidden and styled correctly */
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;              /* مهم: يخفيه */
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  background: rgba(0,0,0,.55);
+  z-index: 99999;
+}
+.modal.show{ display:flex; }
+
+.modal .box{
+  width:min(920px, 96vw);
+  background:#fff;
+  border-radius: 18px;
+  overflow:hidden;
+  border: 1px solid rgba(255,255,255,.25);
+  box-shadow: 0 24px 70px rgba(0,0,0,.35);
+}
+
+.modal .top{
+  padding: 12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(0,110,179,.08), rgba(91,197,0,.06));
+}
+.modal .top b{ font-size: 13px; }
+.modal .top button{
+  border:0;
+  background: transparent;
+  cursor:pointer;
+  font-size: 18px;
+  opacity:.75;
+}
+
+.modal .content{
+  padding: 14px;
+  background: #fff;
+}
+
+.preview-frame{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow:hidden;
+  background: #F8FAFC;
+}
+.preview-frame img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
 </style>
 
 <header class="site-header">
@@ -434,7 +507,7 @@
     <nav class="nav" aria-label="Primary">
       <a class="chip" href="#dashboard"><span class="dot"></span>Dashboard</a>
       <a class="chip green" href="#records"><span class="dot"></span>Records</a>
-      <a class="chip ghost" href="#notifications">Notifications</a>
+      <!-- ✅ Notifications removed because cards removed -->
     </nav>
 
     <div class="right">
@@ -443,15 +516,67 @@
         <span class="icon">⌕</span>
       </div>
 
-      <button class="btn primary" type="button" onclick="window.location.href='#records'">+ Add Record</button>
+      <!-- ✅ Filters dropdown -->
+      <div class="dropdown" id="filterDropdown">
+        <button class="btn" type="button" id="filterBtn" aria-haspopup="true" aria-expanded="false">
+          Filters <span style="opacity:.7;">▾</span>
+        </button>
+
+        <div class="menu" role="menu" aria-label="Quick Filters">
+          <div class="menu-hd">
+            <b>Quick Filters</b>
+            <small>Fast compliance view</small>
+          </div>
+
+          <button class="item" type="button" role="menuitem"
+            onclick="window.LMS_FILTER?.apply?.('all'); window.LMS_HDR?.closeFilters?.();">
+            <span class="left">
+              <span class="icon-dot"></span>
+              <span class="txt"><b>All</b><small>Show all records</small></span>
+            </span>
+            <span class="kbd">A</span>
+          </button>
+
+          <button class="item" type="button" role="menuitem"
+            onclick="window.LMS_FILTER?.apply?.('valid'); window.LMS_HDR?.closeFilters?.();">
+            <span class="left">
+              <span class="icon-dot green"></span>
+              <span class="txt"><b>Valid</b><small>Not expired</small></span>
+            </span>
+            <span class="kbd">V</span>
+          </button>
+
+          <button class="item" type="button" role="menuitem"
+            onclick="window.LMS_FILTER?.apply?.('expiring'); window.LMS_HDR?.closeFilters?.();">
+            <span class="left">
+              <span class="icon-dot warn"></span>
+              <span class="txt"><b>Expiring</b><small>Next 30 days</small></span>
+            </span>
+            <span class="kbd">E</span>
+          </button>
+
+          <button class="item" type="button" role="menuitem"
+            onclick="window.LMS_FILTER?.apply?.('expired'); window.LMS_HDR?.closeFilters?.();">
+            <span class="left">
+              <span class="icon-dot bad"></span>
+              <span class="txt"><b>Expired</b><small>Past due</small></span>
+            </span>
+            <span class="kbd">X</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ✅ New Record → create.html -->
+      <button class="btn primary" type="button" onclick="window.location.href='{% url 'registry:create_record' %}'">
+        + New Record
+      </button>
     </div>
   </div>
 </header>
 
 <script>
-  // Shared helpers (used by home.html too)
+  // Shared helpers
   window.LMS_UI = window.LMS_UI || {};
-
   window.LMS_UI.escapeHtml = function(str){
     str = String(str ?? "");
     return str
@@ -461,4 +586,43 @@
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
   };
+
+  // Dropdown controller
+  window.LMS_HDR = window.LMS_HDR || {};
+  window.LMS_HDR.closeFilters = function(){
+    const dd = document.getElementById("filterDropdown");
+    const btn = document.getElementById("filterBtn");
+    if(dd) dd.classList.remove("open");
+    if(btn) btn.setAttribute("aria-expanded", "false");
+  };
+
+  (function(){
+    const dd = document.getElementById("filterDropdown");
+    const btn = document.getElementById("filterBtn");
+    if(!dd || !btn) return;
+
+    const toggle = () => {
+      const isOpen = dd.classList.toggle("open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    };
+
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      toggle();
+    });
+
+    document.addEventListener("click", function(){
+      window.LMS_HDR.closeFilters();
+    });
+
+    dd.querySelector(".menu")?.addEventListener("click", function(e){
+      e.stopPropagation();
+    });
+
+    document.addEventListener("keydown", function(e){
+      if(e.key === "Escape"){
+        window.LMS_HDR.closeFilters();
+      }
+    });
+  })();
 </script>

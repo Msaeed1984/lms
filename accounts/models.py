@@ -78,6 +78,11 @@ class User(AbstractUser, TimeStampedModel):
         verbose_name = "User"
         verbose_name_plural = "Users"
 
+    # ✅ Global permission: ONLY role=ADMIN can view all organizations
+    @property
+    def can_view_all_orgs(self) -> bool:
+        return self.role == UserRole.ADMIN
+
     @property
     def is_org_admin(self) -> bool:
         return self.role == UserRole.ADMIN

@@ -1,0 +1,486 @@
+<!-- templates/license-template/create.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Create Record • Certificates & Licenses</title>
+
+  <style>
+    :root{
+      --em-blue:#006EB3;
+      --em-green:#5BC500;
+      --bg:#f6f8fc;
+      --card:#ffffff;
+      --text:#0b1220;
+      --muted: rgba(11,18,32,.62);
+      --line: rgba(11,18,32,.10);
+      --shadow: 0 18px 44px rgba(0,0,0,.10);
+      --r: 18px;
+      --r2: 14px;
+      --focus: 0 0 0 4px rgba(0,110,179,.16);
+      --danger: #e11d48;
+    }
+
+    /* keep footer down */
+    body{ min-height:100vh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); }
+    main{ flex:1; }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 14px 24px;
+    }
+
+    .cardx{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .cardx-hd{
+      padding: 16px 16px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      background:
+        radial-gradient(1200px 300px at 20% -40%, rgba(0,110,179,.14), transparent 50%),
+        radial-gradient(900px 280px at 90% 0%, rgba(91,197,0,.10), transparent 55%),
+        #fff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title{
+      margin:0;
+      font-size: 16px;
+      letter-spacing: .2px;
+      font-weight: 700;
+    }
+    .sub{
+      margin:4px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
+    /* Make inputs modern even if Django widget is plain */
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+      min-width:0;
+    }
+    .label{
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .help{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* generic control style */
+    .control :is(input,select,textarea){
+      width:100%;
+      border: 1px solid rgba(11,18,32,.14);
+      background: #fff;
+      border-radius: 14px;
+      padding: 11px 12px;
+      font-size: 13.5px;
+      color: var(--text);
+      outline: none;
+      transition: box-shadow .15s ease, border-color .15s ease, transform .12s ease;
+    }
+    .control :is(input,select,textarea):focus{
+      border-color: rgba(0,110,179,.55);
+      box-shadow: var(--focus);
+    }
+    .control :is(input[type="file"]){
+      padding: 9px 10px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 860px){
+      .grid2{ grid-template-columns: 1fr; }
+    }
+
+    .cardx-bd{
+      padding: 16px;
+      display:grid;
+      gap: 12px;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 2px;
+    }
+
+    /* Buttons: try to match your existing .btn if exists */
+    .btn2{
+      appearance:none;
+      border: 1px solid rgba(11,18,32,.12);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .btn2:hover{ transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,.10); border-color: rgba(11,18,32,.18); }
+    .btn2:active{ transform: translateY(0); }
+    .btn2.primary{
+      background: linear-gradient(135deg, var(--em-blue), #1a87cf);
+      border-color: rgba(0,110,179,.25);
+      color:#fff;
+    }
+    .btn2.light{
+      background: rgba(0,110,179,.06);
+      border-color: rgba(0,110,179,.18);
+      color: var(--em-blue);
+    }
+
+    /* Errors (Django) */
+    .errorlist{
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--danger);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .errorlist li{
+      background: rgba(225,29,72,.06);
+      border: 1px solid rgba(225,29,72,.14);
+      padding: 8px 10px;
+      border-radius: 12px;
+    }
+
+    /* Latest uploads list */
+    .mini{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.75);
+      overflow:hidden;
+    }
+    .mini-hd{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .mini-bd{ padding: 12px 14px; display:grid; gap: 10px; }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      border: 1px solid rgba(0,0,0,.06);
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 14px;
+    }
+    .row .name{
+      font-size: 13px;
+      font-weight: 600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 560px;
+    }
+    .row .meta{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 99999;
+      width: min(420px, calc(100vw - 36px));
+      display:grid;
+      gap:10px;
+      pointer-events:none;
+    }
+    .toast .t{
+      pointer-events:auto;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,.10);
+      border-left: 5px solid var(--em-green);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      padding: 12px 12px;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      transform: translateY(-8px);
+      opacity: 0;
+      animation: pop .22s ease forwards;
+    }
+    @keyframes pop{
+      to { transform: translateY(0); opacity:1; }
+    }
+    .toast .icon{
+      width: 34px; height: 34px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      background: rgba(91,197,0,.14);
+      border: 1px solid rgba(91,197,0,.25);
+      color: #1a7f00;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .toast .msg b{ display:block; font-size:13.5px; }
+    .toast .msg span{ display:block; color: var(--muted); font-size:12.5px; margin-top:2px; }
+    .toast .close{
+      margin-left:auto;
+      border:0;
+      background: transparent;
+      cursor:pointer;
+      color: rgba(11,18,32,.55);
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+
+    /* Preview modal */
+    #previewModal{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:9999;
+    }
+    #previewModal .box{
+      width:min(980px, 96vw);
+      height:min(84vh, 760px);
+      background:#fff;
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      display:flex; flex-direction:column;
+    }
+    #previewModal .box-hd{
+      padding:12px 14px;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid rgba(0,0,0,.08);
+    }
+    #previewFrame{ border:0; width:100%; height:100%; background:#f7f9fc; }
+  </style>
+</head>
+
+<body>
+  {% include "license-template/header.html" %}
+
+  <main>
+    <div class="wrap">
+
+      <section class="cardx">
+        <div class="cardx-hd">
+          <div>
+            <h1 class="title">Create New Record</h1>
+            <p class="sub">
+              Add certificate/license details + upload evidence (Image/PDF). After saving, you’ll see latest uploads below.
+            </p>
+          </div>
+
+          <!-- ✅ FIXED: namespace -->
+          <a class="btn2 light" href="{% url 'registry:home' %}">← Back</a>
+        </div>
+
+        <div class="cardx-bd">
+
+          <form method="post" enctype="multipart/form-data" style="display:grid; gap:12px;">
+            {% csrf_token %}
+
+            <div class="grid2">
+              <div class="field">
+                <div class="label">Record Type</div>
+                <div class="control">{{ form.record_type }}</div>
+                {{ form.record_type.errors }}
+              </div>
+
+              <div class="field">
+                <div class="label">Reference No</div>
+                <div class="control">{{ form.reference_no }}</div>
+                <div class="help">Example: CERT-01004 / LIC-00210</div>
+                {{ form.reference_no.errors }}
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div class="field">
+                <div class="label">Title</div>
+                <div class="control">{{ form.title }}</div>
+                {{ form.title.errors }}
+              </div>
+
+              <div class="field">
+                <div class="label">Owner</div>
+                <div class="control">{{ form.owner }}</div>
+                <div class="help">Responsible person/department</div>
+                {{ form.owner.errors }}
+              </div>
+            </div>
+
+            <div class="grid2">
+              <div class="field">
+                <div class="label">Expiry Date</div>
+                <div class="control">{{ form.expiry_date }}</div>
+                {{ form.expiry_date.errors }}
+              </div>
+
+              <div class="field">
+                <div class="label">Evidence Image</div>
+                <div class="control">{{ form.evidence_image }}</div>
+                <div class="help">PNG/JPG recommended</div>
+                {{ form.evidence_image.errors }}
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label">Evidence PDF</div>
+              <div class="control">{{ form.evidence_pdf }}</div>
+              <div class="help">PDF copy (optional)</div>
+              {{ form.evidence_pdf.errors }}
+            </div>
+
+            <div class="actions">
+              <button class="btn2 primary" type="submit">Save</button>
+              <a class="btn2" href="{% url 'registry:home' %}">Cancel</a>
+            </div>
+          </form>
+
+          {% if recent_attachments %}
+            <div class="mini" style="margin-top:6px;">
+              <div class="mini-hd">
+                <b style="font-size:13.5px;">Latest Uploads</b>
+                <small class="sub" style="margin:0;">Last 2 files uploaded</small>
+              </div>
+
+              <div class="mini-bd">
+                {% for a in recent_attachments %}
+                  <div class="row">
+                    <div style="min-width:0;">
+                      <div class="name">{{ a.file.name }}</div>
+                      <div class="meta">{{ a.file_type }} • {{ a.created_at|date:"Y-m-d H:i" }}</div>
+                    </div>
+
+                    <button class="btn2" type="button" onclick="openPreview('{{ a.file.url }}')">Preview</button>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  {% include "license-template/footer.html" %}
+
+  <!-- ✅ Toast container -->
+  <div class="toast" id="toastArea" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ✅ Preview Popup (Image/PDF) -->
+  <div id="previewModal">
+    <div class="box">
+      <div class="box-hd">
+        <b style="font-size:14px;">Preview</b>
+        <button class="btn2" type="button" onclick="closePreview()">Close</button>
+      </div>
+      <div style="flex:1;">
+        <iframe id="previewFrame" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Preview =====
+    function openPreview(url){
+      const modal = document.getElementById("previewModal");
+      const frame = document.getElementById("previewFrame");
+      frame.src = url;
+      modal.style.display = "flex";
+    }
+    function closePreview(){
+      const modal = document.getElementById("previewModal");
+      const frame = document.getElementById("previewFrame");
+      frame.src = "";
+      modal.style.display = "none";
+    }
+    document.getElementById("previewModal")?.addEventListener("click", function(e){
+      if (e.target === this) closePreview();
+    });
+
+    // ===== Toast (JS) =====
+    function showToast(title, message){
+      const area = document.getElementById("toastArea");
+      if (!area) return;
+
+      const el = document.createElement("div");
+      el.className = "t";
+      el.innerHTML = `
+        <div class="icon">✓</div>
+        <div class="msg">
+          <b></b>
+          <span></span>
+        </div>
+        <button class="close" type="button" aria-label="Close">×</button>
+      `;
+      el.querySelector(".msg b").textContent = title;
+      el.querySelector(".msg span").textContent = message;
+
+      const closeBtn = el.querySelector(".close");
+      closeBtn.addEventListener("click", () => {
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px)";
+        setTimeout(()=> el.remove(), 160);
+      });
+
+      area.appendChild(el);
+
+      // auto dismiss
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        el.style.opacity = "0";
+        el.style.transform = "translateY(-6px)";
+        setTimeout(()=> el.remove(), 180);
+      }, 3500);
+    }
+
+    // ✅ Django success flag triggers toast (no backend change)
+    (function(){
+      const saved = "{{ success|yesno:'1,0' }}";
+      if (saved === "1"){
+        showToast("Saved successfully", "Your record and attachments were uploaded.");
+      }
+    })();
+  </script>
+</body>
+</html>

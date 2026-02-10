@@ -1,0 +1,217 @@
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from datetime import date, timedelta
+from typing import Iterable, List, Tuple
+
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+
+from registry.models import Record, RecordStatus
+from .models import (
+    NotificationRule,
+    NotificationLog,
+    NotificationKind,
+    NotificationStatus,
+)
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class SendResult:
+    created: bool
+    status: str
+    message: str
+
+
+def _safe_emails(emails: Iterable[str | None]) -> List[str]:
+    out: List[str] = []
+    for e in emails:
+        if not e:
+            continue
+        e = e.strip()
+        if "@" in e and len(e) <= 254:
+            out.append(e)
+    # unique preserve order
+    seen = set()
+    uniq = []
+    for e in out:
+        if e not in seen:
+            uniq.append(e)
+            seen.add(e)
+    return uniq
+
+
+def _render_subject(rule: NotificationRule, record: Record, kind: str, days_left: int) -> str:
+    if rule.email_subject_template:
+        # very simple placeholder replacement (safe)
+        s = rule.email_subject_template
+    else:
+        s = "[Certificates & Licenses] {kind}: {title} ({ref}) - {days} days left"
+
+    return (
+        s.replace("{kind}", kind)
+        .replace("{title}", record.title or "")
+        .replace("{ref}", record.reference_no or "N/A")
+        .replace("{days}", str(days_left))
+        .strip()
+    )
+
+
+def _render_body(rule: NotificationRule, record: Record, kind: str, days_left: int) -> str:
+    if rule.email_body_template:
+        b = rule.email_body_template
+    else:
+        b = (
+            "Hello,\n\n"
+            "This is a {kind} for:\n"
+            "- Title: {title}\n"
+            "- Reference: {ref}\n"
+            "- Expiry Date: {expiry}\n"
+            "- Days Left: {days}\n\n"
+            "Please take the required action.\n\n"
+            "Thanks,\n"
+            "IT Information Technology\n"
+        )
+
+    return (
+        b.replace("{kind}", kind)
+        .replace("{title}", record.title or "")
+        .replace("{ref}", record.reference_no or "N/A")
+        .replace("{expiry}", str(record.expiry_date))
+        .replace("{days}", str(days_left))
+    )
+
+
+def _send_email(to_emails: List[str], subject: str, body: str) -> None:
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or "no-reply@example.com"
+    msg = EmailMultiAlternatives(subject=subject, body=body, from_email=from_email, to=to_emails)
+    msg.send(fail_silently=False)
+
+
+def _create_log_or_skip(record: Record, rule: NotificationRule, kind: str, trigger_date: date) -> Tuple[NotificationLog | None, bool]:
+    """
+    Returns (log, created). If already exists -> (None, False) and treat as skipped.
+    """
+    try:
+        with transaction.atomic():
+            log = NotificationLog.objects.create(
+                organization=record.organization,
+                record=record,
+                rule=rule,
+                kind=kind,
+                trigger_date=trigger_date,
+                status=NotificationStatus.PENDING,
+            )
+            return log, True
+    except IntegrityError:
+        # UniqueConstraint hit => already created before
+        return None, False
+
+
+def run_notifications_for_org(org_id: int, run_date: date | None = None) -> dict:
+    """
+    Main runner for one Organization.
+    Returns summary stats dict.
+    """
+    run_date = run_date or timezone.localdate()
+    soon_rules = (
+        NotificationRule.objects
+        .filter(organization_id=org_id, enabled=True)
+        .only("id", "organization_id", "name", "applies_to_all", "record_type", "category",
+              "offsets_days", "escalate_enabled", "escalate_offsets_days",
+              "email_subject_template", "email_body_template", "channel")
+    )
+
+    # Load records for org (exclude archived)
+    records = (
+        Record.objects
+        .filter(organization_id=org_id)
+        .exclude(status=RecordStatus.ARCHIVED)
+        .select_related("owner")
+        .only("id", "organization_id", "title", "reference_no", "expiry_date", "record_type", "category",
+              "owner__email")
+    )
+
+    created = sent = failed = skipped = 0
+
+    for rule in soon_rules:
+        # Prefetch escalation recipients once per rule
+        escalation_users = []
+        if rule.escalate_enabled:
+            escalation_users = list(rule.escalation_recipients.all().only("email"))
+
+        for record in records:
+            if not record.expiry_date:
+                continue
+            if not rule.matches_record(record):
+                continue
+
+            days_left = (record.expiry_date - run_date).days
+
+            # ===== Reminder =====
+            if days_left in set(rule.offsets_days or []):
+                log, is_created = _create_log_or_skip(record, rule, NotificationKind.REMINDER, run_date)
+                if not is_created:
+                    skipped += 1
+                else:
+                    created += 1
+                    try:
+                        to_emails = _safe_emails([getattr(record.owner, "email", None)])
+                        if not to_emails:
+                            log.status = NotificationStatus.SKIPPED
+                            log.error_message = "No recipient email (record owner)."
+                            log.save(update_fields=["status", "error_message", "updated_at"])
+                        else:
+                            subject = _render_subject(rule, record, "Reminder", days_left)
+                            body = _render_body(rule, record, "Reminder", days_left)
+                            _send_email(to_emails, subject, body)
+
+                            log.mark_sent(recipients=to_emails, payload_summary=subject)
+                            log.save(update_fields=["status", "sent_at", "recipients", "payload_summary", "updated_at"])
+                            sent += 1
+                    except Exception as e:
+                        logger.exception("Reminder send failed org=%s record=%s rule=%s", org_id, record.id, rule.id)
+                        log.mark_failed(str(e))
+                        log.save(update_fields=["status", "error_message", "updated_at"])
+                        failed += 1
+
+            # ===== Escalation =====
+            if rule.escalate_enabled and (days_left in set(rule.escalate_offsets_days or [])):
+                log, is_created = _create_log_or_skip(record, rule, NotificationKind.ESCALATION, run_date)
+                if not is_created:
+                    skipped += 1
+                else:
+                    created += 1
+                    try:
+                        to_emails = _safe_emails([u.email for u in escalation_users])
+                        if not to_emails:
+                            log.status = NotificationStatus.SKIPPED
+                            log.error_message = "No escalation recipients configured."
+                            log.save(update_fields=["status", "error_message", "updated_at"])
+                        else:
+                            subject = _render_subject(rule, record, "Escalation", days_left)
+                            body = _render_body(rule, record, "Escalation", days_left)
+                            _send_email(to_emails, subject, body)
+
+                            log.mark_sent(recipients=to_emails, payload_summary=subject)
+                            log.save(update_fields=["status", "sent_at", "recipients", "payload_summary", "updated_at"])
+                            sent += 1
+                    except Exception as e:
+                        logger.exception("Escalation send failed org=%s record=%s rule=%s", org_id, record.id, rule.id)
+                        log.mark_failed(str(e))
+                        log.save(update_fields=["status", "error_message", "updated_at"])
+                        failed += 1
+
+    return {
+        "organization_id": org_id,
+        "date": str(run_date),
+        "created": created,
+        "sent": sent,
+        "failed": failed,
+        "skipped": skipped,
+    }

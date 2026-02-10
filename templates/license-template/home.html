@@ -18,7 +18,7 @@
         <div>
           <h1 id="helloTitle">Welcome</h1>
           <p>
-            Track certificates and licenses, attach evidence images, and receive smart expiry reminders قبل الانتهاء.
+            Track certificates and licenses, attach evidence images, and receive smart expiry reminders  .
             <span class="muted">Designed with EMSTEEL style (Blue/Green).</span>
           </p>
         </div>
@@ -44,7 +44,7 @@
           <div class="bd">
             <div class="stat">
               <div>
-                <div class="num">{{ total_count|default:"—" }}</div>
+                <div class="num">{{ total_count|default:"0" }}</div>
                 <div class="lbl">Registered items</div>
               </div>
               <span class="badge info">Live</span>
@@ -60,7 +60,7 @@
           <div class="bd">
             <div class="stat">
               <div>
-                <div class="num">{{ expiring_soon_count|default:"—" }}</div>
+                <div class="num">{{ expiring_soon_count|default:"0" }}</div>
                 <div class="lbl">Need action</div>
               </div>
               <span class="badge warn">Warning</span>
@@ -76,7 +76,7 @@
           <div class="bd">
             <div class="stat">
               <div>
-                <div class="num">{{ expired_count|default:"—" }}</div>
+                <div class="num">{{ expired_count|default:"0" }}</div>
                 <div class="lbl">Immediate follow-up</div>
               </div>
               <span class="badge bad">Critical</span>
@@ -92,7 +92,7 @@
           <div class="bd">
             <div class="stat">
               <div>
-                <div class="num">{{ valid_count|default:"—" }}</div>
+                <div class="num">{{ valid_count|default:"0" }}</div>
                 <div class="lbl">In compliance</div>
               </div>
               <span class="badge ok">OK</span>
@@ -103,66 +103,7 @@
 
       <div style="height:14px"></div>
 
-      <!-- Notifications / Actions -->
-      <section class="grid cols-2" id="notifications" aria-label="Notifications & Actions">
-        <div class="card">
-          <div class="hd">
-            <b>Smart Reminder</b>
-            <small class="muted">Before expiry alert</small>
-          </div>
-          <div class="bd">
-            <div style="display:flex; align-items:flex-start; gap:12px;">
-              <div style="
-                width:44px;height:44px;border-radius:14px;
-                background: rgba(0,110,179,.10);
-                border:1px solid rgba(0,110,179,.18);
-                display:grid;place-items:center;
-                color: var(--em-blue);
-                font-weight:800;
-              ">!</div>
-
-              <div>
-                <div style="font-weight:700; font-size:14px;">
-                  Automated alerts can be sent to owners قبل الانتهاء (e.g., 30/14/7 days).
-                </div>
-                <div class="muted" style="font-size:13px; line-height:1.6; margin-top:6px;">
-                  Tip: Use email/Teams notifications in your backend scheduler (Celery/cron) based on expiry_date.
-                </div>
-
-                <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn" type="button" onclick="alert('Connect this button to your Create Record page (Django URL).')">
-                    + New Certificate
-                  </button>
-                  <button class="btn primary" type="button" onclick="document.getElementById('globalSearch')?.focus()">
-                    Search Records
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="hd">
-            <b>Quick Filters</b>
-            <small class="muted">Fast compliance view</small>
-          </div>
-          <div class="bd">
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="chip" type="button" onclick="LMS_FILTER.apply('all')"><span class="dot"></span>All</button>
-              <button class="chip green" type="button" onclick="LMS_FILTER.apply('valid')"><span class="dot"></span>Valid</button>
-              <button class="chip" type="button" onclick="LMS_FILTER.apply('expiring')"><span class="dot"></span>Expiring</button>
-              <button class="chip" type="button" onclick="LMS_FILTER.apply('expired')"><span class="dot"></span>Expired</button>
-            </div>
-
-            <div class="muted" style="font-size:13px; line-height:1.6; margin-top:12px;">
-              هذه الفلاتر تعمل على الجدول بالأسفل مباشرة (Front-end) — ويمكنك ربطها لاحقاً بـ query parameters في Django.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div style="height:14px"></div>
+      <!-- ✅ Smart Reminder + Tips removed بالكامل -->
 
       <!-- Records Table -->
       <section class="card" id="records" aria-label="Records Table">
@@ -181,23 +122,78 @@
                 <th>Status</th>
                 <th>Record ID</th>
                 <th>Title</th>
+
+                <!-- ✅ NEW: show Organization only for ADMIN -->
+                {% if is_global_admin %}
+                  <th>Organization</th>
+                {% endif %}
+
                 <th>Owner</th>
                 <th>Expiry Date</th>
                 <th>Days Left</th>
-                <th>Evidence</th>
+                <th>
+                  Evidence
+                  <span class="muted" style="font-size:11px; margin-left:6px;">(Preview)</span>
+                </th>
               </tr>
             </thead>
-            <tbody id="recordsBody">
-              <!--
-                Option A (Backend): loop from Django:
-                {% for r in records %}
-                  <tr data-status="{{ r.status|lower }}">
-                    ...
-                  </tr>
-                {% endfor %}
 
-                Option B (Frontend demo): JS will inject sample rows if empty.
-              -->
+            <tbody id="recordsBody">
+              {% if org_missing %}
+                <tr>
+                  <td colspan="{% if is_global_admin %}8{% else %}7{% endif %}" class="muted">
+                    No Organization assigned to your account. Contact admin.
+                  </td>
+                </tr>
+              {% else %}
+                {% for r in records %}
+                  <tr data-status="{{ r.status_ui }}">
+                    <td>
+                      <span class="status {% if r.status_ui == 'expired' %}bad{% elif r.status_ui == 'expiring' %}warn{% else %}ok{% endif %}">
+                        <span class="s-dot"></span>
+                        <span class="badge {% if r.status_ui == 'expired' %}bad{% elif r.status_ui == 'expiring' %}warn{% else %}ok{% endif %}">
+                          {% if r.status_ui == 'expired' %}Expired{% elif r.status_ui == 'expiring' %}Expiring{% else %}Valid{% endif %}
+                        </span>
+                      </span>
+                    </td>
+
+                    <td><b>{{ r.id }}</b></td>
+                    <td>{{ r.title }}</td>
+
+                    <!-- ✅ NEW: org column only for ADMIN -->
+                    {% if is_global_admin %}
+                      <td class="muted">{{ r.org_name|default:"—" }}</td>
+                    {% endif %}
+
+                    <td class="muted">{{ r.owner_name }}</td>
+                    <td>{{ r.expiry_date|date:"Y-m-d" }}</td>
+
+                    <td>
+                      {% if r.days_left < 0 %}
+                        <span class="badge bad">Overdue</span>
+                      {% elif r.days_left <= 30 %}
+                        <span class="badge warn">{{ r.days_left }} days</span>
+                      {% else %}
+                        <span class="badge ok">{{ r.days_left }} days</span>
+                      {% endif %}
+                    </td>
+
+                    <td>
+                      {% if r.preview_url %}
+                        <button class="btn" type="button"
+                          onclick="LMS_UI.openPreview('{{ r.title|escapejs }} — #{{ r.id }}','{{ r.preview_url|escapejs }}')">
+                          Preview
+                        </button>
+                      {% else %}
+                        <span class="muted">—</span>
+                      {% endif %}
+                    </td>
+
+                  </tr>
+                {% empty %}
+                  <!-- If no backend rows, keep your JS demo behavior -->
+                {% endfor %}
+              {% endif %}
             </tbody>
           </table>
         </div>
@@ -209,7 +205,99 @@
 
   {% include "license-template/footer.html" %}
 
+  <!-- ✅ Image Preview Popup (Nice) -->
+  <div id="imgOverlay" style="
+    position:fixed; inset:0; display:none; z-index:999;
+    background: rgba(15,23,42,.55);
+    backdrop-filter: blur(6px);
+    padding:14px;
+    align-items:center; justify-content:center;
+  " role="dialog" aria-modal="true" aria-label="Image Preview">
+    <div style="
+      width:min(980px,100%);
+      background:#fff;
+      border:1px solid rgba(229,231,235,1);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow: 0 40px 90px rgba(15,23,42,.30);
+    ">
+      <div style="
+        padding:12px 14px;
+        background: linear-gradient(90deg, rgba(0,119,200,.10), rgba(91,197,0,.10));
+        border-bottom:1px solid rgba(238,242,247,1);
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+      ">
+        <div id="imgTitle" style="
+          font-size:13.5px; font-weight:700; color:#0f172a;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        ">Preview</div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a id="imgOpen" href="#" target="_blank" rel="noopener" class="btn"
+             style="padding:8px 10px; font-size:12px; display:none; text-decoration:none;">
+            Open
+          </a>
+          <button class="btn" type="button" style="padding:8px 10px; font-size:12px;" onclick="LMS_UI.closePreview()">
+            Close
+          </button>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc; padding:12px; display:flex; justify-content:center; align-items:center;">
+        <img id="imgView" alt="Evidence Preview" src=""
+             style="width:100%; max-height:72vh; object-fit:contain; border-radius:14px; border:1px solid #E5E7EB; background:#fff;">
+      </div>
+    </div>
+  </div>
+
   <script>
+    // ===== Utilities + Preview Popup =====
+    const LMS_UI = window.LMS_UI || {};
+    LMS_UI.openPreview = function(title, imgUrl){
+      const overlay = document.getElementById("imgOverlay");
+      const img = document.getElementById("imgView");
+      const t = document.getElementById("imgTitle");
+      const open = document.getElementById("imgOpen");
+
+      if(!overlay || !img || !t) return;
+      if(!imgUrl) return;
+
+      t.textContent = title || "Preview";
+      img.src = imgUrl;
+
+      if(String(imgUrl).startsWith("data:image/")){
+        open.style.display = "none";
+        open.href = "#";
+      }else{
+        open.style.display = "inline-flex";
+        open.href = imgUrl;
+      }
+
+      overlay.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    };
+
+    LMS_UI.closePreview = function(){
+      const overlay = document.getElementById("imgOverlay");
+      const img = document.getElementById("imgView");
+      if(overlay) overlay.style.display = "none";
+      if(img) img.src = "";
+      document.body.style.overflow = "";
+    };
+
+    (function(){
+      const overlay = document.getElementById("imgOverlay");
+      if(!overlay) return;
+      overlay.addEventListener("click", function(e){
+        if(e.target === overlay) LMS_UI.closePreview();
+      });
+      document.addEventListener("keydown", function(e){
+        if(e.key === "Escape" && overlay.style.display === "flex"){
+          LMS_UI.closePreview();
+        }
+      });
+    })();
+
     // ===== Page JS =====
     (function(){
       const hello = document.getElementById("helloTitle");
@@ -225,8 +313,8 @@
       }
     })();
 
-    // Simple front-end filter/search (safe & fast)
-    const LMS_FILTER = {
+    // Filter/search
+    window.LMS_FILTER = window.LMS_FILTER || {
       apply: function(type){
         const rows = Array.from(document.querySelectorAll("#recordsBody tr"));
         rows.forEach(r => {
@@ -238,7 +326,7 @@
             (type === "expired" && st === "expired");
           r.style.display = show ? "" : "none";
         });
-        LMS_FILTER.updateShown();
+        window.LMS_FILTER.updateShown();
       },
       updateShown: function(){
         const rows = Array.from(document.querySelectorAll("#recordsBody tr"));
@@ -261,70 +349,10 @@
           r.style.display = (!q || text.includes(q)) ? "" : "none";
         });
 
-        LMS_FILTER.updateShown();
+        window.LMS_FILTER.updateShown();
       });
-    })();
 
-    // Demo rows if backend did not render any
-    (function(){
-      const body = document.getElementById("recordsBody");
-      if (!body) return;
-
-      const hasRows = body.querySelector("tr");
-      if (hasRows) { LMS_FILTER.updateShown(); return; }
-
-      const sample = [
-        {status:"valid", id:"LIC-00021", title:"Trade License", owner:"Facilities", expiry:"2026-12-31", img:"https://dummyimage.com/1200x800/ffffff/006EB3&text=Trade+License"},
-        {status:"expiring", id:"CERT-01004", title:"ISO 14001 Certificate", owner:"Sustainability", expiry:"2026-03-05", img:"https://dummyimage.com/1200x800/ffffff/5BC500&text=ISO+14001"},
-        {status:"expired", id:"CERT-00077", title:"Calibration Certificate", owner:"QC Team", expiry:"2025-12-15", img:"https://dummyimage.com/1200x800/ffffff/E11D48&text=Expired+Doc"},
-        {status:"valid", id:"LIC-00210", title:"Insurance Document", owner:"Finance", expiry:"2026-08-20", img:"https://dummyimage.com/1200x800/ffffff/0B1220&text=Insurance"}
-      ];
-
-      const daysLeft = (dateStr) => {
-        const d = new Date(dateStr + "T00:00:00");
-        const now = new Date();
-        const diff = Math.ceil((d - now) / (1000*60*60*24));
-        return diff;
-      };
-
-      const statusCell = (st) => {
-        const cls = st === "expired" ? "bad" : (st === "expiring" ? "warn" : "ok");
-        const label = st === "expired" ? "Expired" : (st === "expiring" ? "Expiring" : "Valid");
-        return `
-          <span class="status ${st === "expired" ? "bad" : (st === "expiring" ? "warn" : "ok")}">
-            <span class="s-dot"></span>
-            <span class="badge ${cls}">${label}</span>
-          </span>
-        `;
-      };
-
-      body.innerHTML = sample.map(r => {
-        const left = daysLeft(r.expiry);
-        const leftText = (left < 0) ? "Overdue" : String(left);
-        const leftBadge =
-          (left < 0) ? `<span class="badge bad">Overdue</span>` :
-          (left <= 30) ? `<span class="badge warn">${left} days</span>` :
-          `<span class="badge ok">${left} days</span>`;
-
-        return `
-          <tr data-status="${LMS_UI.escapeHtml(r.status)}">
-            <td>${statusCell(r.status)}</td>
-            <td><b>${LMS_UI.escapeHtml(r.id)}</b></td>
-            <td>${LMS_UI.escapeHtml(r.title)}</td>
-            <td class="muted">${LMS_UI.escapeHtml(r.owner)}</td>
-            <td>${LMS_UI.escapeHtml(r.expiry)}</td>
-            <td>${leftBadge}</td>
-            <td>
-              <button class="btn" type="button"
-                onclick="LMS_UI.openPreview('${LMS_UI.escapeHtml(r.title)} — ${LMS_UI.escapeHtml(r.id)}','${LMS_UI.escapeHtml(r.img)}')">
-                Preview
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join("");
-
-      LMS_FILTER.updateShown();
+      window.LMS_FILTER.updateShown();
     })();
   </script>
 

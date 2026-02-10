@@ -1,24 +1,36 @@
+from __future__ import annotations
+
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 
 from .models import Record, Attachment, ActivityLog
 
 
 class OrgScopedAdminMixin:
     """
-    Filters queryset by the logged-in user's organization (unless superuser).
+    Filters queryset by the logged-in user's organization.
+    ✅ Only role=ADMIN can view ALL organizations.
     Assumes model has `organization` field OR can be filtered via relations.
     """
 
+    def _is_global_admin(self, request) -> bool:
+        return bool(getattr(request.user, "can_view_all_orgs", False))
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_superuser:
+
+        # ✅ Only role=ADMIN sees everything
+        if self._is_global_admin(request):
             return qs
+
         org_id = getattr(request.user, "organization_id", None)
         if not org_id:
             return qs.none()
+
         # Direct org field
         if hasattr(self.model, "organization_id"):
             return qs.filter(organization_id=org_id)
+
         return qs
 
 
@@ -70,18 +82,36 @@ class RecordAdmin(OrgScopedAdminMixin, admin.ModelAdmin):
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
+    def _is_global_admin(self, request) -> bool:
+        return bool(getattr(request.user, "can_view_all_orgs", False))
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        ✅ Non-ADMIN: make organization readonly to prevent switching tenant.
+        """
+        ro = list(super().get_readonly_fields(request, obj))
+        if not self._is_global_admin(request):
+            if "organization" not in ro:
+                ro.append("organization")
+        return ro
+
     def save_model(self, request, obj, form, change):
         # Auto-set created_by on create if not provided
         if not change and not obj.created_by_id:
             obj.created_by = request.user
-        # Safety: if non-superuser, force organization to user's org when empty
-        if not request.user.is_superuser and not obj.organization_id:
-            obj.organization_id = getattr(request.user, "organization_id", None)
+
+        # ✅ Non-ADMIN: force organization to user's org ALWAYS (tenant safety)
+        if not self._is_global_admin(request):
+            org_id = getattr(request.user, "organization_id", None)
+            if not org_id:
+                raise PermissionDenied("User has no organization assigned.")
+            obj.organization_id = org_id
+
         super().save_model(request, obj, form, change)
 
 
 @admin.register(Attachment)
-class AttachmentAdmin(admin.ModelAdmin):
+class AttachmentAdmin(OrgScopedAdminMixin, admin.ModelAdmin):
     list_display = ("record", "file_type", "version", "uploaded_by", "created_at")
     list_filter = ("file_type",)
     search_fields = ("record__title", "record__reference_no", "uploaded_by__username", "uploaded_by__email")
@@ -90,7 +120,7 @@ class AttachmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ActivityLog)
-class ActivityLogAdmin(admin.ModelAdmin):
+class ActivityLogAdmin(OrgScopedAdminMixin, admin.ModelAdmin):
     list_display = ("record", "action", "changed_by", "created_at")
     list_filter = ("action",)
     search_fields = ("record__title", "record__reference_no", "changed_by__username", "summary")
