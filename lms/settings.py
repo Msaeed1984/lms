@@ -9,24 +9,30 @@ from dotenv import load_dotenv
 # ================== BASE DIR ==================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv(BASE_DIR / ".env")
 
 
+# ================== HELPERS ==================
+def env_bool(key: str, default: bool = False) -> bool:
+    return os.environ.get(key, str(default)).lower() in ("1", "true", "yes")
+
+
+def env_list(key: str, default: str = "") -> list:
+    raw = os.environ.get(key, default)
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
 # ================== SECURITY ==================
-# ✅ الأفضل: خزن SECRET_KEY في متغير بيئة بالإنتاج
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-+i)$l2-$p-c1by@y(!+x8!@#absa$nmlh%!+2oowbc=$7919s6",
 )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
-# ✅ في التطوير محلياً
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
-
-# ✅ إذا شغلت على دومين/سيرفر لاحقاً (مثال):
-# ALLOWED_HOSTS += ["your-domain.com", "www.your-domain.com"]
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 
 
 # ================== APPLICATIONS ==================
@@ -38,32 +44,25 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # ✅ Required for allauth
     "django.contrib.sites",
 
-    # ✅ Cloudinary (Media Storage)
     "cloudinary",
     "cloudinary_storage",
 
-    # ✅ Allauth Core
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-
-    # ✅ Microsoft Provider (Azure AD)
     "allauth.socialaccount.providers.microsoft",
 
-    # ✅ Project Apps
     "accounts",
     "registry",
     "notifications",
 ]
 
-# ✅ Custom User Model
 AUTH_USER_MODEL = "accounts.User"
 
 
-# ================== ALLAUTH CONFIG ==================
+# ================== ALLAUTH ==================
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = (
@@ -71,28 +70,20 @@ AUTHENTICATION_BACKENDS = (
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
-# ✅ Auth URLs (keep exactly as you had to avoid breaking flow)
 LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"              # ✅ keep as-is (safe)
+LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
-# ✅ Login by Username OR Email
 ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "none"
-
-# ✅ No self registration (Admin only)
 ACCOUNT_ALLOW_REGISTRATION = False
-
-# ✅ Remember session (optional)
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_LOGOUT_ON_GET = False
 
-# ✅ Prevent auto-creating users from Microsoft login
 SOCIALACCOUNT_AUTO_SIGNUP = False
 
-# ✅ Microsoft provider minimal settings (safe)
 SOCIALACCOUNT_PROVIDERS = {
     "microsoft": {
         "SCOPE": ["openid", "email", "profile", "User.Read"],
@@ -105,21 +96,17 @@ SOCIALACCOUNT_PROVIDERS = {
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-
-    "django.middleware.locale.LocaleMiddleware",  # للغات
-
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-
-    "allauth.account.middleware.AccountMiddleware",  # ✅ required
-
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 
-# ================== URLS / WSGI ==================
+# ================== URLS ==================
 ROOT_URLCONF = "lms.urls"
 WSGI_APPLICATION = "lms.wsgi.application"
 
@@ -133,11 +120,9 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
-                "django.template.context_processors.request",  # ✅ required for admin & allauth
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-
-                # Optional but useful
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
@@ -148,12 +133,31 @@ TEMPLATES = [
 
 
 # ================== DATABASE ==================
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "development").lower()
+USE_POSTGRES = env_bool("USE_POSTGRES", False) or DJANGO_ENV == "production"
+
+if USE_POSTGRES:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "HOST": os.environ.get("POSTGRES_HOST"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "OPTIONS": {
+                "sslmode": os.environ.get("POSTGRES_SSLMODE", "require"),
+            },
+            "CONN_MAX_AGE": int(os.environ.get("POSTGRES_CONN_MAX_AGE", "60")),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # ================== PASSWORD VALIDATION ==================
@@ -165,7 +169,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# ================== INTERNATIONALIZATION ==================
+# ================== INTERNATIONAL ==================
 LANGUAGE_CODE = "en"
 USE_I18N = True
 
@@ -174,85 +178,70 @@ LANGUAGES = [
     ("ar", "العربية"),
 ]
 
-TIME_ZONE = "UTC"   # ✅ keep as-is (safe)
+TIME_ZONE = "UTC"
 USE_TZ = True
 
 LANGUAGE_COOKIE_NAME = "django_language"
 
 
-# ================== STATIC & MEDIA ==================
+# ================== STATIC ==================
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# ✅ MEDIA: سيتم تخزين الملفات على Cloudinary عبر DEFAULT_FILE_STORAGE
+
+# ================== MEDIA ==================
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"  # لن تُستخدم فعلياً مع Cloudinary، لكن لا ضرر من إبقائها
+MEDIA_ROOT = BASE_DIR / "media"
 
-# ✅ Upload limits (safe, helps image/pdf attachments)
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024      # 5MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024     # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 
-# ================== CLOUDINARY (MEDIA STORAGE) ==================
-# ✅ ضع القيم في .env:
-# CLOUDINARY_CLOUD_NAME=...
-# CLOUDINARY_API_KEY=...
-# CLOUDINARY_API_SECRET=...
+# ================== CLOUDINARY ==================
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": os.environ.get("CLOUDINARY_CLOUD_NAME", ""),
-    "API_KEY": os.environ.get("CLOUDINARY_API_KEY", ""),
-    "API_SECRET": os.environ.get("CLOUDINARY_API_SECRET", ""),
-    "SECURE": True,  # يقدم روابط https
+    "CLOUD_NAME": os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    "API_KEY": os.environ.get("CLOUDINARY_API_KEY"),
+    "API_SECRET": os.environ.get("CLOUDINARY_API_SECRET"),
+    "SECURE": True,
 }
 
-# ✅ اجعل Cloudinary هو مخزن الميديا الافتراضي
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 
-# ================== EMAIL (Office 365 SMTP) ==================
-# ✅ ضع كلمة المرور في متغير بيئة: EMAIL_HOST_PASSWORD
+# ================== EMAIL ==================
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
 EMAIL_HOST = "smtp.office365.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "zms@emsteel.com")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
-# From/Reply-to الافتراضي
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
-    "Visitor Arrival Notification <zms@emsteel.com>",
+    "ZMS <zms@emsteel.com>",
 )
-SERVER_EMAIL = EMAIL_HOST_USER
 
-# ✅ اختياري: مهلة الإرسال (ثواني)
 EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "20"))
 
 
-# ================== SECURITY HEADERS (SAFE DEFAULTS) ==================
-# These won't break local development because DEBUG=True => secure cookies False.
+# ================== SECURITY HEADERS ==================
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
-# ✅ مهم عند النشر خلف Reverse Proxy/HTTPS (فعّله عند الحاجة)
-# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# ✅ إذا نشرت على دومين https وتكرر CSRF 403، أضف الدومين هنا:
-# CSRF_TRUSTED_ORIGINS = [
-#     "https://your-domain.com",
-#     "https://www.your-domain.com",
-# ]
-
-
-# ================== LOGGING (Helpful for Notification Engine) ==================
+# ================== LOGGING ==================
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -261,14 +250,10 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO" if not DEBUG else "DEBUG",
-    },
-    "loggers": {
-        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "notifications": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "level": "DEBUG" if DEBUG else "INFO",
     },
 }
 
 
-# ================== DEFAULT PRIMARY KEY ==================
+# ================== DEFAULT PK ==================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
